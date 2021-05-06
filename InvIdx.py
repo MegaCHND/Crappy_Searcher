@@ -4,7 +4,7 @@ import json
 from bs4 import BeautifulSoup
 from nltk.stem import SnowballStemmer
 
-#global vars tha cna be changed
+#global vars tha can be changed
 dict_of_Words = dict()
 text = ""
 
