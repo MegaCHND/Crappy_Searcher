@@ -1,11 +1,11 @@
-import os
+import os 
 from collections import defaultdict
 from bs4 import BeautifulSoup
-import re
-import traceback
-import json
-import math
-from nltk.stem import SnowballStemmer #For stemming, use Snowball from nltk
+import re 
+import traceback 
+import json 
+import math 
+from nltk.stem import SnowballStemmer 
 
 #Since we'll need to rank words for searching later, might as well try to do so now
 #I chose strong, b, bold, h1-3, and title. I didn't include h4-6 b/c the text shrinks back to normal the closer you get to 6
@@ -33,8 +33,6 @@ class Data:
         self.idf = 0
         self.postings = defaultdict(Posting)
         
-#inverted index is a data scructure so I made it one unlike what we had before
-#I think I got every important point we need
 class InvertedIndex:
     def __init__(self):
         self.dictionary = defaultdict(Data)
@@ -43,7 +41,7 @@ class InvertedIndex:
         return self.dictionary[term]
     def __setitem__(self, term, data):
         self.dictionary[term] = data
-    def get_number_of_terms(self):
+    def get_number_of_words(self):
         return len(self.dictionary.keys())
     def items(self):
         return self.dictionary.items()
@@ -60,24 +58,15 @@ class InvertedIndex:
         json.dump(j, outfile, indent = 4)
     def print_report(self, outfile):
         outfile.write("Words Found \n")
-        outfile.write(str(self.get_number_of_terms()))
+        outfile.write(str(self.get_number_of_words()))
         outfile.write("\nNumber of indexed documents \n")
         outfile.write(str(self.num_doc_ids))
 
-def tokenize(webpage, docID):
+def tokenize(html, docID):
     print("tokenizing " + docID)
     global index
     global ps
-    soup = BeautifulSoup(webpage, 'lxml')
-    #Notice, I tokenize every word in the soup like we used to. I can change it to tokenize only in the special tags tho
-    text = soup.get_text()
-    tokens = re.split('\W+', text.lower().strip())            
-    for token in tokens:
-        if token != "":
-            token = ps.stem(token)
-            index[token].postings[docID].tf += 1
-            
-    #Here, I'm not tokenizing again but adding the specail tags to the corresponding words
+    soup = BeautifulSoup(html, 'lxml')
     special_tags = soup.find_all(["strong", "b", "bold", "h1", "h2", "h3", "title"])
     for special_tag in special_tags:
         special_tag_content = special_tag.get_text().strip()
@@ -85,6 +74,7 @@ def tokenize(webpage, docID):
         for token in tokens:
             if token != "":
                 token = ps.stem(token)
+                index[token].postings[docID].tf += 1
                 index[token].postings[docID].special_tags.add(special_tag.name)
 
 def openFile(subdir,file):
@@ -105,10 +95,9 @@ ps = SnowballStemmer('english')
 
 try:
     for subdir, dirs, files in os.walk(directory):
-     for file in files:
-        index.num_doc_ids += 1
-        openFile(subdir,file)
-        index.num_doc_ids += 1
+        for file in files:
+            openFile(subdir,file)
+            index.num_doc_ids += 1
     for term, data in index.items():
         #after the index is made, I go back and calculate the idf vals for every word (technically stem)
         data.idf = index.num_doc_ids/float(len(data.postings))
