@@ -1,11 +1,12 @@
 import os 
-from collections import defaultdict
-from bs4 import BeautifulSoup
 import re 
 import traceback 
 import json 
 import math 
-from nltk.stem import SnowballStemmer 
+from bs4 import BeautifulSoup
+from collections import defaultdict
+from nltk.stem import SnowballStemmer
+from urllib.parse import urlparse,urldefrag
 
 #Since we'll need to rank words for searching later, might as well try to do so now
 #I chose strong, b, bold, h1-3, and title. I didn't include h4-6 b/c the text shrinks back to normal the closer you get to 6
@@ -61,6 +62,9 @@ class InvertedIndex:
         outfile.write(str(self.get_number_of_words()))
         outfile.write("\nNumber of indexed documents \n")
         outfile.write(str(self.num_doc_ids))
+    def wipe(self):
+        self.dictionary.clear()
+        self.num_doc_ids = 0
 
 def tokenize(html, docID):
     print("tokenizing " + docID)
@@ -79,35 +83,57 @@ def tokenize(html, docID):
 
 def openFile(subdir,file):
     global CurrFilePath
+    global Dict_of_Urls
     CurrFilePath = os.fsdecode(os.path.join(subdir, file))
     OpenedFile = open(CurrFilePath, "r")
     JsonContent = json.load(OpenedFile)
     HtmlContent = JsonContent["content"]
     CurrUrl = JsonContent["url"]
-    tokenize(HtmlContent, CurrUrl)
+    defragedUrl = urldefrag(CurrUrl)[0]
+    if defragedUrl not in Dict_of_Urls:
+        Dict_of_Urls[defragedUrl] = Dict_of_Urls.get(defragedUrl, 0) + 1
+        tokenize(HtmlContent, CurrUrl)
 
+def dumpIt():
+    #Here I print stuff for M1 report
+    global counterOfMadeIndexes
+    global indexNameOfFile
+    global index
+    indexFile = indexNameOfFile+str(counterOfMadeIndexes)+".json"
+    indexF = open(indexFile, "w")   
+    index.get_Full_Index(indexF)
+    indexF.close()
+    
 index = InvertedIndex();
 CurrDirectory = os.getcwd()
-directory_in_str = '\developer'
+directory_in_str = '\dev2'
 directory = os.fsencode(CurrDirectory + directory_in_str)
+stop_words = {"a","about","above","after","again","against","all","am","an","and","any","are","arent","as","at","be","because","been","before","being","below","between","both","but","by","cant","cannot","could","couldnt","did","didnt","do","does","doesnt","doing","dont","down","during","each","few","for","from","further","had","hadnt","has","hasnt","have","havent","having","he","hed","hell","hes","her","here","heres","hers","herself","him","himself","his","how","hows","i","id","ill","im","ive","if","in","into","is","isnt","it","its","its","itself","lets","me","more","most","mustnt","my","myself","no","nor","not","of","off","on","once","only","or","other","ought","our","ours","ourselves","out","over","own","same","shant","she","shed","shell","shes","should","shouldnt","so","some","such","than","that","thats","the","their","theirs","them","themselves","then","there","theres","these","they","theyd","theyll","theyre","theyve","this","those","through","to","too","under","until","up","very","was","wasnt","we","wed","well","were","weve","were","werent","what","whats","when","whens","where","wheres","which","while","who","whos","whom","why","whys","with","wont","would","wouldnt","you","youd","youll","youre","youve","your","yours","yourself","yourselves"}
 CurrFilePath = ""
 ps = SnowballStemmer('english')
+Dict_of_Urls = {}
+indexNameOfFile = "ParIndex"
+counterOfMadeIndexes = 0
 
 try:
     for subdir, dirs, files in os.walk(directory):
         for file in files:
-            openFile(subdir,file)
-            index.num_doc_ids += 1
+            if index.num_doc_ids <= 500:
+                openFile(subdir,file)
+                index.num_doc_ids += 1
+            else:
+                print("Dumping")
+                dumpIt()
+                counterOfMadeIndexes += 1
+                index.wipe()
+                
     for term, data in index.items():
         #after the index is made, I go back and calculate the idf vals for every word (technically stem)
         data.idf = index.num_doc_ids/float(len(data.postings))
 except:
     traceback.print_exc()
     
-#Here I print stuff for M1 report
+dumpIt()
 reportFile = open("report.txt" , "w") 
-indexFile = open("index.json", "w")   
-index.get_Full_Index(indexFile)
 index.print_report(reportFile)
 reportFile.close()
-indexFile.close()

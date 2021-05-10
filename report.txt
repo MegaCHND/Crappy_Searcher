@@ -1,12 +1,4 @@
-Student UCID's
-Christoher Dang: 71153430
-Sanay Talsania: 19808099
-Frank Battaglia: 93804469
-Kevin Ly: 39282856
-
 Words Found 
-49230
+592
 Number of indexed documents 
-55393
-Size of index on disk
-216671 kb
+303
