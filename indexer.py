@@ -57,11 +57,11 @@ class InvertedIndex:
                 j[term]["postings"][docID]["tf"] = posting.tf
                 j[term]["postings"][docID]["special_tags"] = list(posting.special_tags)
         json.dump(j, outfile, indent = 4)
-    def print_report(self, outfile):
+    '''def print_report(self, outfile):
         outfile.write("Words Found \n")
         outfile.write(str(self.get_number_of_words()))
         outfile.write("\nNumber of indexed documents \n")
-        outfile.write(str(self.num_doc_ids))
+        outfile.write(str(self.num_doc_ids))'''
     def wipe(self):
         self.dictionary.clear()
         self.num_doc_ids = 0
@@ -134,6 +134,3 @@ except:
     traceback.print_exc()
     
 dumpIt()
-reportFile = open("report.txt" , "w") 
-index.print_report(reportFile)
-reportFile.close()
