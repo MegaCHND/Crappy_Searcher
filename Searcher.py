@@ -16,14 +16,20 @@ SPECIAL_TAG_FACTORS = {
     "title": 1.5,
 }
 
+indexNameOfFile = "ParIndex"
 stop_words = {"a","about","above","after","again","against","all","am","an","and","any","are","arent","as","at","be","because","been","before","being","below","between","both","but","by","cant","cannot","could","couldnt","did","didnt","do","does","doesnt","doing","dont","down","during","each","few","for","from","further","had","hadnt","has","hasnt","have","havent","having","he","hed","hell","hes","her","here","heres","hers","herself","him","himself","his","how","hows","i","id","ill","im","ive","if","in","into","is","isnt","it","its","its","itself","lets","me","more","most","mustnt","my","myself","no","nor","not","of","off","on","once","only","or","other","ought","our","ours","ourselves","out","over","own","same","shant","she","shed","shell","shes","should","shouldnt","so","some","such","than","that","thats","the","their","theirs","them","themselves","then","there","theres","these","they","theyd","theyll","theyre","theyve","this","those","through","to","too","under","until","up","very","was","wasnt","we","wed","well","were","weve","were","werent","what","whats","when","whens","where","wheres","which","while","who","whos","whom","why","whys","with","wont","would","wouldnt","you","youd","youll","youre","youve","your","yours","yourself","yourselves"}
 miniIndex = indexer.InvertedIndex()
 ps = SnowballStemmer('english')
+csv_file = open('index_of_indexes.csv', "r", encoding="utf-8")
+csv_reader = csv.reader(csv_file, delimiter=',')
+csv_rows = []
+for row in csv_reader:
+    csv_rows.append(row)
 
 def get_results(query, num_results_to_show):
-    tic = time.perf_counter()
     global miniIndex
     score = defaultdict(float)
+    tic = time.perf_counter()
     for token in query.split(" "):
         if token not in stop_words:
             token = ps.stem(token)
@@ -45,21 +51,20 @@ def get_results(query, num_results_to_show):
     toc = time.perf_counter()
     print("Query is " + query)
     print(f"Found results in {toc - tic:0.4f} seconds")
+    miniIndex.wipe()
     return results
 
 
 def grab_records(word):
     global miniIndex
-    indexNameOfFile = "ParIndex"
+    global csv_rows
     list_of_miniIndexes = []
-
-    with open('index_of_indexes.csv', encoding="utf-8") as csv_file:
-        csv_reader = csv.reader(csv_file, delimiter=',')
-        line_count = 0    
-        for row in csv_reader:
-            if (word in row):
-                list_of_miniIndexes.append(line_count)
-            line_count += 1
+    line_count = 0    
+    
+    for row in csv_rows:
+        if (word in row):
+            list_of_miniIndexes.append(line_count)
+        line_count += 1
 
     for indexNum in list_of_miniIndexes:
         miniIndexName = indexNameOfFile+str(indexNum)+".json"
@@ -68,4 +73,5 @@ def grab_records(word):
         miniIndex[word].idf += miniIndexJson[word]["idf"]
         miniIndex[word].postings.update(miniIndexJson[word]["postings"])
     
-    miniIndex[word].idf = miniIndex[word].idf/len(list_of_miniIndexes)
+    if(len(list_of_miniIndexes)>0):
+        miniIndex[word].idf = miniIndex[word].idf/len(list_of_miniIndexes)
