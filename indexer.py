@@ -8,25 +8,13 @@ from collections import defaultdict
 from nltk.stem import SnowballStemmer
 from urllib.parse import urlparse,urldefrag
 
-#Since we'll need to rank words for searching later, might as well try to do so now
-#I chose strong, b, bold, h1-3, and title. I didn't include h4-6 b/c the text shrinks back to normal the closer you get to 6
-#p isn't special b/c the prof didn't include it in his list in the assignment =p
-SPECIAL_TAG_FACTORS = {
-    "strong": 1.2,
-    "b": 1.2,
-    "bold": 1.2,
-    "h1": 1.4,
-    "h2": 1.3,
-    "h3": 1.25,
-    "title": 1.5,
-}
-
 #Made classes for the inverted index to use
 #Posting contains the tf score as well as the specail tags used (if the word was in any)
 class Posting:
     def __init__(self):
         self.tf = 0
         self.special_tags = set()
+        self.position = 0
         
 #Data contains the posting as well as the idf score for the word
 class Data:
@@ -56,6 +44,7 @@ class InvertedIndex:
                 j[term]["postings"][docID] = dict()
                 j[term]["postings"][docID]["tf"] = posting.tf
                 j[term]["postings"][docID]["special_tags"] = list(posting.special_tags)
+                j[term]["postings"][docID]["position"] = posting.position
         json.dump(j, outfile, indent = 4)
     '''def print_report(self, outfile):
         outfile.write("Words Found \n")
@@ -72,6 +61,7 @@ def tokenize(html, docID):
     global ps
     soup = BeautifulSoup(html, 'lxml')
     special_tags = soup.find_all(["strong", "b", "bold", "h1", "h2", "h3", "title"])
+    token_position = 1
     for special_tag in special_tags:
         special_tag_content = special_tag.get_text().strip()
         tokens = re.split('\W+', special_tag_content)
@@ -80,12 +70,14 @@ def tokenize(html, docID):
                 token = ps.stem(token)
                 index[token].postings[docID].tf += 1
                 index[token].postings[docID].special_tags.add(special_tag.name)
+                index[token].postings[docID].position = token_position
+                token_position += 1
 
 def openFile(subdir,file):
     global CurrFilePath
     global Dict_of_Urls
     CurrFilePath = os.fsdecode(os.path.join(subdir, file))
-    OpenedFile = open(CurrFilePath, "r")
+    OpenedFile = open(CurrFilePath, "r", encoding="utf-8")
     JsonContent = json.load(OpenedFile)
     HtmlContent = JsonContent["content"]
     CurrUrl = JsonContent["url"]
@@ -95,7 +87,6 @@ def openFile(subdir,file):
         tokenize(HtmlContent, CurrUrl)
 
 def dumpIt():
-    #Here I print stuff for M1 report
     global counterOfMadeIndexes
     global indexNameOfFile
     global index
@@ -104,33 +95,39 @@ def dumpIt():
     index.get_Full_Index(indexF)
     indexF.close()
     
-index = InvertedIndex();
-CurrDirectory = os.getcwd()
-directory_in_str = '\dev2'
-directory = os.fsencode(CurrDirectory + directory_in_str)
-stop_words = {"a","about","above","after","again","against","all","am","an","and","any","are","arent","as","at","be","because","been","before","being","below","between","both","but","by","cant","cannot","could","couldnt","did","didnt","do","does","doesnt","doing","dont","down","during","each","few","for","from","further","had","hadnt","has","hasnt","have","havent","having","he","hed","hell","hes","her","here","heres","hers","herself","him","himself","his","how","hows","i","id","ill","im","ive","if","in","into","is","isnt","it","its","its","itself","lets","me","more","most","mustnt","my","myself","no","nor","not","of","off","on","once","only","or","other","ought","our","ours","ourselves","out","over","own","same","shant","she","shed","shell","shes","should","shouldnt","so","some","such","than","that","thats","the","their","theirs","them","themselves","then","there","theres","these","they","theyd","theyll","theyre","theyve","this","those","through","to","too","under","until","up","very","was","wasnt","we","wed","well","were","weve","were","werent","what","whats","when","whens","where","wheres","which","while","who","whos","whom","why","whys","with","wont","would","wouldnt","you","youd","youll","youre","youve","your","yours","yourself","yourselves"}
-CurrFilePath = ""
-ps = SnowballStemmer('english')
-Dict_of_Urls = {}
-indexNameOfFile = "ParIndex"
-counterOfMadeIndexes = 0
+if __name__ == '__main__':    
+    index = InvertedIndex();
+    CurrDirectory = os.getcwd()
+    directory_in_str = '\developer'
+    directory = os.fsencode(CurrDirectory + directory_in_str)
+    CurrFilePath = ""
+    ps = SnowballStemmer('english')
+    Dict_of_Urls = {}
+    indexNameOfFile = "ParIndex"
+    counterOfMadeIndexes = 0
 
-try:
-    for subdir, dirs, files in os.walk(directory):
-        for file in files:
-            if index.num_doc_ids <= 500:
-                openFile(subdir,file)
-                index.num_doc_ids += 1
-            else:
-                print("Dumping")
-                dumpIt()
-                counterOfMadeIndexes += 1
-                index.wipe()
-                
-    for term, data in index.items():
-        #after the index is made, I go back and calculate the idf vals for every word (technically stem)
-        data.idf = index.num_doc_ids/float(len(data.postings))
-except:
-    traceback.print_exc()
-    
-dumpIt()
+    try:
+        for subdir, dirs, files in os.walk(directory):
+            for file in files:
+                if index.num_doc_ids <= 10000:
+                    openFile(subdir,file)
+                    index.num_doc_ids += 1
+                else:
+                    for term, data in index.items():
+                        #after the index is made, I go back and calculate the idf vals for every word (technically stem)
+                        data.idf = index.num_doc_ids/float(len(data.postings))
+                    print("Dumping")
+                    dumpIt()
+                    counterOfMadeIndexes += 1
+                    index.wipe()
+        
+        #computing last set of idf's before the final data dump
+        for term, data in index.items():
+            #after the index is made, I go back and calculate the idf vals for every word (technically stem)
+            data.idf = index.num_doc_ids/float(len(data.postings))
+        dumpIt()
+        index.wipe()
+
+    except:
+        traceback.print_exc()
+
