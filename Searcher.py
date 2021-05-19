@@ -31,6 +31,7 @@ def get_results(query, num_results_to_show):
     score = defaultdict(float)
     tic = time.perf_counter()
     for token in query.split(" "):
+        print("token is " + token)
         if token not in stop_words:
             token = ps.stem(token)
             grab_records(token)
@@ -65,7 +66,9 @@ def grab_records(word):
         if (word in row):
             list_of_miniIndexes.append(line_count)
         line_count += 1
-
+    print("list_of_miniIndexes is:")
+    print(list_of_miniIndexes)
+    
     for indexNum in list_of_miniIndexes:
         miniIndexName = indexNameOfFile+str(indexNum)+".json"
         miniIndexFile = open(miniIndexName, "r")
@@ -75,3 +78,5 @@ def grab_records(word):
     
     if(len(list_of_miniIndexes)>0):
         miniIndex[word].idf = miniIndex[word].idf/len(list_of_miniIndexes)
+    
+    print(miniIndex[word].postings)

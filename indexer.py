@@ -45,7 +45,9 @@ class InvertedIndex:
                 j[term]["postings"][docID]["tf"] = posting.tf
                 j[term]["postings"][docID]["special_tags"] = list(posting.special_tags)
                 j[term]["postings"][docID]["position"] = posting.position
-        json.dump(j, outfile, indent = 4)
+        for i in j.items():
+            outfile.write(json.dumps(i))
+            outfile.write('\n')
     '''def print_report(self, outfile):
         outfile.write("Words Found \n")
         outfile.write(str(self.get_number_of_words()))
@@ -98,7 +100,7 @@ def dumpIt():
 if __name__ == '__main__':    
     index = InvertedIndex();
     CurrDirectory = os.getcwd()
-    directory_in_str = '\developer'
+    directory_in_str = '\Testo'
     directory = os.fsencode(CurrDirectory + directory_in_str)
     CurrFilePath = ""
     ps = SnowballStemmer('english')
