@@ -1,24 +1,12 @@
 import os 
-from collections import defaultdict
-from bs4 import BeautifulSoup
 import re 
 import traceback 
 import json 
 import math 
-from nltk.stem import SnowballStemmer 
-
-#Since we'll need to rank words for searching later, might as well try to do so now
-#I chose strong, b, bold, h1-3, and title. I didn't include h4-6 b/c the text shrinks back to normal the closer you get to 6
-#p isn't special b/c the prof didn't include it in his list in the assignment =p
-SPECIAL_TAG_FACTORS = {
-    "strong": 1.2,
-    "b": 1.2,
-    "bold": 1.2,
-    "h1": 1.4,
-    "h2": 1.3,
-    "h3": 1.25,
-    "title": 1.5,
-}
+from bs4 import BeautifulSoup
+from collections import defaultdict
+from nltk.stem import SnowballStemmer
+from urllib.parse import urlparse,urldefrag
 
 #Made classes for the inverted index to use
 #Posting contains the tf score as well as the specail tags used (if the word was in any)
@@ -26,6 +14,7 @@ class Posting:
     def __init__(self):
         self.tf = 0
         self.special_tags = set()
+        self.position = 0
         
 #Data contains the posting as well as the idf score for the word
 class Data:
@@ -55,12 +44,16 @@ class InvertedIndex:
                 j[term]["postings"][docID] = dict()
                 j[term]["postings"][docID]["tf"] = posting.tf
                 j[term]["postings"][docID]["special_tags"] = list(posting.special_tags)
+                j[term]["postings"][docID]["position"] = posting.position
         json.dump(j, outfile, indent = 4)
-    def print_report(self, outfile):
+    '''def print_report(self, outfile):
         outfile.write("Words Found \n")
         outfile.write(str(self.get_number_of_words()))
         outfile.write("\nNumber of indexed documents \n")
-        outfile.write(str(self.num_doc_ids))
+        outfile.write(str(self.num_doc_ids))'''
+    def wipe(self):
+        self.dictionary.clear()
+        self.num_doc_ids = 0
 
 def tokenize(html, docID):
     print("tokenizing " + docID)
@@ -68,6 +61,7 @@ def tokenize(html, docID):
     global ps
     soup = BeautifulSoup(html, 'lxml')
     special_tags = soup.find_all(["strong", "b", "bold", "h1", "h2", "h3", "title"])
+    token_position = 1
     for special_tag in special_tags:
         special_tag_content = special_tag.get_text().strip()
         tokens = re.split('\W+', special_tag_content)
@@ -76,38 +70,64 @@ def tokenize(html, docID):
                 token = ps.stem(token)
                 index[token].postings[docID].tf += 1
                 index[token].postings[docID].special_tags.add(special_tag.name)
+                index[token].postings[docID].position = token_position
+                token_position += 1
 
 def openFile(subdir,file):
     global CurrFilePath
+    global Dict_of_Urls
     CurrFilePath = os.fsdecode(os.path.join(subdir, file))
-    OpenedFile = open(CurrFilePath, "r")
+    OpenedFile = open(CurrFilePath, "r", encoding="utf-8")
     JsonContent = json.load(OpenedFile)
     HtmlContent = JsonContent["content"]
     CurrUrl = JsonContent["url"]
-    tokenize(HtmlContent, CurrUrl)
+    defragedUrl = urldefrag(CurrUrl)[0]
+    if defragedUrl not in Dict_of_Urls:
+        Dict_of_Urls[defragedUrl] = Dict_of_Urls.get(defragedUrl, 0) + 1
+        tokenize(HtmlContent, CurrUrl)
 
-index = InvertedIndex();
-CurrDirectory = os.getcwd()
-directory_in_str = '\developer'
-directory = os.fsencode(CurrDirectory + directory_in_str)
-CurrFilePath = ""
-ps = SnowballStemmer('english')
-
-try:
-    for subdir, dirs, files in os.walk(directory):
-        for file in files:
-            openFile(subdir,file)
-            index.num_doc_ids += 1
-    for term, data in index.items():
-        #after the index is made, I go back and calculate the idf vals for every word (technically stem)
-        data.idf = index.num_doc_ids/float(len(data.postings))
-except:
-    traceback.print_exc()
+def dumpIt():
+    global counterOfMadeIndexes
+    global indexNameOfFile
+    global index
+    indexFile = indexNameOfFile+str(counterOfMadeIndexes)+".json"
+    indexF = open(indexFile, "w")   
+    index.get_Full_Index(indexF)
+    indexF.close()
     
-#Here I print stuff for M1 report
-reportFile = open("report.txt" , "w") 
-indexFile = open("index.json", "w")   
-index.get_Full_Index(indexFile)
-index.print_report(reportFile)
-reportFile.close()
-indexFile.close()
+if __name__ == '__main__':    
+    index = InvertedIndex();
+    CurrDirectory = os.getcwd()
+    directory_in_str = '\developer'
+    directory = os.fsencode(CurrDirectory + directory_in_str)
+    CurrFilePath = ""
+    ps = SnowballStemmer('english')
+    Dict_of_Urls = {}
+    indexNameOfFile = "ParIndex"
+    counterOfMadeIndexes = 0
+
+    try:
+        for subdir, dirs, files in os.walk(directory):
+            for file in files:
+                if index.num_doc_ids <= 10000:
+                    openFile(subdir,file)
+                    index.num_doc_ids += 1
+                else:
+                    for term, data in index.items():
+                        #after the index is made, I go back and calculate the idf vals for every word (technically stem)
+                        data.idf = index.num_doc_ids/float(len(data.postings))
+                    print("Dumping")
+                    dumpIt()
+                    counterOfMadeIndexes += 1
+                    index.wipe()
+        
+        #computing last set of idf's before the final data dump
+        for term, data in index.items():
+            #after the index is made, I go back and calculate the idf vals for every word (technically stem)
+            data.idf = index.num_doc_ids/float(len(data.postings))
+        dumpIt()
+        index.wipe()
+
+    except:
+        traceback.print_exc()
+
