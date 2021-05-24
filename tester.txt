@@ -1,1 +1,0 @@
-["artifici", {"idf": 1.5, "postings": {"https://aiclub.ics.uci.edu/": {"tf": 3, "special_tags": ["title", "h3"], "position": 38}, "https://aiclub.ics.uci.edu/index.html": {"tf": 3, "special_tags": ["title", "h3"], "position": 38}}}]

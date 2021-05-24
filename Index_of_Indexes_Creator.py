@@ -2,24 +2,29 @@ import os
 import json
 import pathlib
 from pathlib import Path
-import csv
 
+def index_maker(file):
+    word_location={}
+    reader = open(file)
+    length_start=0
+    for lines in reader:
+        line=lines.split(",")[0]
+        line2=line.replace("[","")
+        line2=line2.replace("\"","")
+        word_location[line2]=length_start
+        length_start+=len(lines)+1
+    return word_location
 
 target_string="ParIndex"
 directory_path=Path(os.getcwd())
 return_list=[]
+
 for file in directory_path.iterdir():
     if target_string in file.name:
         print(file.name)
-        fo = open(file,"r")
-        json_content = json.load(fo)
-        word_list=sorted(json_content.keys())
-        return_list.append(word_list)  
-         
-
-
-with open("index_of_indexes.csv", "w", newline="", encoding="utf-8") as f:
-    writer = csv.writer(f)
-    writer.writerows(return_list)
-        
+        dictionary_of_Terms = index_maker(file.name)
+        return_list.append(dictionary_of_Terms)
+    
+with open("index_of_indexes.json", "w", encoding="utf-8") as f:
+    json.dump(return_list, f, indent = 1)
         

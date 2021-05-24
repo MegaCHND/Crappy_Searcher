@@ -36,7 +36,7 @@ class InvertedIndex:
         return self.dictionary.items()
     def get_Full_Index(self, outfile):
         j = dict()
-        for term, data in self.dictionary.items():
+        for term, data in sorted(self.dictionary.items()):
             j[term] = dict()
             j[term]["idf"] = data.idf
             j[term]["postings"] = dict()
@@ -92,6 +92,7 @@ def dumpIt():
     global counterOfMadeIndexes
     global indexNameOfFile
     global index
+    print("Dumping")
     indexFile = indexNameOfFile+str(counterOfMadeIndexes)+".json"
     indexF = open(indexFile, "w")   
     index.get_Full_Index(indexF)
@@ -118,7 +119,6 @@ if __name__ == '__main__':
                     for term, data in index.items():
                         #after the index is made, I go back and calculate the idf vals for every word (technically stem)
                         data.idf = index.num_doc_ids/float(len(data.postings))
-                    print("Dumping")
                     dumpIt()
                     counterOfMadeIndexes += 1
                     index.wipe()
