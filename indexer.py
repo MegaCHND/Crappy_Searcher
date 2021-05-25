@@ -118,7 +118,7 @@ if __name__ == '__main__':
                 else:
                     for term, data in index.items():
                         #after the index is made, I go back and calculate the idf vals for every word (technically stem)
-                        data.idf = index.num_doc_ids/float(len(data.postings))
+                        data.idf = math.log(index.num_doc_ids/float(len(data.postings)))
                     dumpIt()
                     counterOfMadeIndexes += 1
                     index.wipe()
@@ -126,7 +126,7 @@ if __name__ == '__main__':
         #computing last set of idf's before the final data dump
         for term, data in index.items():
             #after the index is made, I go back and calculate the idf vals for every word (technically stem)
-            data.idf = index.num_doc_ids/float(len(data.postings))
+            data.idf = math.log(index.num_doc_ids/float(len(data.postings)))
         dumpIt()
         index.wipe()
 
