@@ -101,7 +101,7 @@ def dumpIt():
 if __name__ == '__main__':    
     index = InvertedIndex();
     CurrDirectory = os.getcwd()
-    directory_in_str = '\Testo'
+    directory_in_str = '\developer'
     directory = os.fsencode(CurrDirectory + directory_in_str)
     CurrFilePath = ""
     ps = SnowballStemmer('english')

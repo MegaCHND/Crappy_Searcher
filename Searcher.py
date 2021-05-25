@@ -20,7 +20,9 @@ stop_words = {"a","about","above","after","again","against","all","am","an","and
 miniIndex = indexer.InvertedIndex()
 ps = SnowballStemmer('english')
 json_index_file = open('index_of_indexes.json', "r", encoding="utf-8")
+FullIndexFile = open("fullIndex.json", "r", encoding="utf-8")
 ListOfDicts = json.load(json_index_file)
+
 
 def get_results(query, num_results_to_show):
     global miniIndex
@@ -55,8 +57,14 @@ def grab_records(word):
     global miniIndex
     Word_exists_count = 0
     word_pos = 0
-    
-    for indexNum in range(len(ListOfDicts)):
+    if(ListOfDicts.get(word) is not None):
+        word_pos = ListOfDicts[word]
+        FullIndexFile.seek(word_pos)
+        data = FullIndexFile.readline() 
+        miniIndexJson = json.loads(data)
+        miniIndex[word].idf += miniIndexJson[1]["idf"]
+        miniIndex[word].postings.update(miniIndexJson[1]["postings"])
+    '''for indexNum in range(len(ListOfDicts)):
         if(ListOfDicts[indexNum].get(word) is not None):
             miniIndexName = indexNameOfFile+str(indexNum)+".json"
             miniIndexFile = open(miniIndexName, "r")
@@ -69,4 +77,4 @@ def grab_records(word):
             Word_exists_count += 1
     
     if(Word_exists_count > 0):
-        miniIndex[word].idf = miniIndex[word].idf/Word_exists_count
+        miniIndex[word].idf = miniIndex[word].idf/Word_exists_count'''
